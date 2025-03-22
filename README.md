@@ -1,4 +1,3 @@
-# Agenticai_langgraph_project
 ---
 title: LanggraphAgenticAI
 emoji: 🐨
