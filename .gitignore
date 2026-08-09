@@ -172,3 +172,12 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Local virtual environments
+agenticVenv/
+.venv/
+venv/
+
+# Environment variables
+.env
+.env.*
