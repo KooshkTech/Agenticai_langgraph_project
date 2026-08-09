@@ -23,7 +23,7 @@ def test_config_reads_usecase_options():
 def test_config_reads_groq_model_options():
     """Config must read and split GROQ_MODEL_OPTIONS from the INI file."""
     config = Config()
-    expected = ["mixtral-8x7b-32768", "llama3-8b-8192", "llama3-70b-8192", "gemma-7b-i"]
+    expected = ["llama-3.3-70b-versatile", "llama3-8b-8192", "llama3-70b-8192", "gemma-7b-i"]
     assert config.get_groq_model_options() == expected
 
 
