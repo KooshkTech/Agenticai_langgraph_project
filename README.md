@@ -320,7 +320,21 @@ The following are reasonable future enhancements, **not** currently implemented:
 ## Screenshots
 
 Screenshots are not currently available. Add screenshots of the Streamlit UI here once captured.
+## ⚡ LangGraph State Flow
 
+Stateful Agentic AI Workflow powered by LangGraph, Groq & Tavily.
+
+![LangGraph State Flow](screenshots/langgraph-state-flow.png)
+
+### Features
+
+- LangGraph StateGraph workflow
+- Groq LLM integration
+- Tavily web search
+- ToolNode execution
+- Stateful conversation
+- User-provided API keys
+- 18/18 tests passing
 ---
 
 ## License
