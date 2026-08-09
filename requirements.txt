@@ -1,8 +1,7 @@
-langchain
-langgraph
-langchain_community
-langchain_core
-langchain_groq
-langchain_openai
-faiss-cpu
-streamlit
+langchain==0.3.25
+langgraph==0.2.67
+langchain_community==0.3.25
+langchain_core==0.3.65
+langchain_groq==0.2.5
+streamlit==1.42.0
+pytest==8.3.4
