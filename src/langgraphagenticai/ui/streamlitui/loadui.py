@@ -3,6 +3,25 @@ import os
 from src.langgraphagenticai.ui.uiconfigfile import Config
 
 
+def _get_credential(key_name: str) -> str:
+    """
+    Reads credential safely from environment variables or Streamlit secrets.
+    Never raises an exception if secrets file is missing.
+    """
+    if os.environ.get(key_name):
+        return os.environ.get(key_name)
+    try:
+        if hasattr(st, "secrets") and key_name in st.secrets:
+            val = st.secrets[key_name]
+            if val:
+                val_str = str(val).strip()
+                os.environ[key_name] = val_str
+                return val_str
+    except Exception:
+        pass
+    return ""
+
+
 class LoadStreamlitUI:
     def __init__(self):
         self.config = Config()
@@ -36,7 +55,7 @@ class LoadStreamlitUI:
             color: #c9d1d9 !important;
         }
 
-        /* Input fields, selectboxes, text inputs */
+        /* Selectboxes and inputs */
         div[data-baseweb="select"] > div,
         input[type="text"],
         input[type="password"],
@@ -224,7 +243,8 @@ class LoadStreamlitUI:
 
     def load_streamlit_ui(self):
         """
-        Loads the Streamlit UI with sidebar settings, cards, and state tracking.
+        Loads the Streamlit UI with sidebar settings, system cards, and state tracking.
+        Reads credentials automatically from environment variables / Streamlit secrets.
         """
         st.set_page_config(
             page_title="⚡ LangGraph State Flow",
@@ -233,11 +253,13 @@ class LoadStreamlitUI:
         )
         self.inject_custom_css()
 
-        # Initialize session state keys if missing
-        if "GROQ_API_KEY" not in st.session_state:
-            st.session_state["GROQ_API_KEY"] = os.environ.get("GROQ_API_KEY", "")
-        if "TAVILY_API_KEY" not in st.session_state:
-            st.session_state["TAVILY_API_KEY"] = os.environ.get("TAVILY_API_KEY", "")
+        # Read credentials automatically from secrets / env vars (No public inputs)
+        groq_api_key = _get_credential("GROQ_API_KEY")
+        tavily_api_key = _get_credential("TAVILY_API_KEY")
+
+        self.user_controls["GROQ_API_KEY"] = st.session_state["GROQ_API_KEY"] = groq_api_key
+        self.user_controls["TAVILY_API_KEY"] = st.session_state["TAVILY_API_KEY"] = tavily_api_key
+
         if "messages" not in st.session_state:
             st.session_state.messages = []
 
@@ -248,7 +270,7 @@ class LoadStreamlitUI:
                 <span style="font-size: 1.2rem; font-weight: 700; color: #f0f6fc; letter-spacing: -0.02em;">LangGraph State Flow</span>
             </div>
             <div style="font-size: 0.78rem; color: #8b949e; margin-bottom: 16px;">
-                Professional AI Studio Architecture
+                Public AI Studio Demo
             </div>
             """, unsafe_allow_html=True)
 
@@ -264,44 +286,21 @@ class LoadStreamlitUI:
                 help="Supported active Groq production models"
             )
 
-            # API Key Configuration
-            st.markdown("<div style='font-size:0.75rem; font-weight:700; color:#8b949e; text-transform:uppercase; margin-top:12px; margin-bottom:6px;'>API Configuration</div>", unsafe_allow_html=True)
-
-            groq_key_input = st.text_input(
-                "Groq API Key",
-                value=st.session_state["GROQ_API_KEY"],
-                type="password",
-                placeholder="gsk_..."
-            )
-            self.user_controls["GROQ_API_KEY"] = st.session_state["GROQ_API_KEY"] = groq_key_input
-            if groq_key_input:
-                os.environ["GROQ_API_KEY"] = groq_key_input
-
-            tavily_key_input = st.text_input(
-                "Tavily API Key",
-                value=st.session_state["TAVILY_API_KEY"],
-                type="password",
-                placeholder="tvly-..."
-            )
-            self.user_controls["TAVILY_API_KEY"] = st.session_state["TAVILY_API_KEY"] = tavily_key_input
-            if tavily_key_input:
-                os.environ["TAVILY_API_KEY"] = tavily_key_input
-
             # Workflow selector
             st.markdown("<div style='font-size:0.75rem; font-weight:700; color:#8b949e; text-transform:uppercase; margin-top:12px; margin-bottom:6px;'>Workflow Selection</div>", unsafe_allow_html=True)
             usecase_options = self.config.get_usecase_options()
             self.user_controls["selected_usecase"] = st.selectbox("Workflow Selector", usecase_options)
 
             selected_usecase = self.user_controls["selected_usecase"]
-            groq_ready = bool(self.user_controls["GROQ_API_KEY"])
-            tavily_ready = bool(self.user_controls["TAVILY_API_KEY"])
+            groq_ready = bool(groq_api_key)
+            tavily_ready = bool(tavily_api_key)
 
             # System Status Card
-            groq_badge = '<span class="badge-ready">READY</span>' if groq_ready else '<span class="badge-warning">KEY REQUIRED</span>'
+            groq_badge = '<span class="badge-ready">READY</span>' if groq_ready else '<span class="badge-warning">MISSING IN SECRETS</span>'
             if selected_usecase == "Chatbot with Tool":
-                tavily_badge = '<span class="badge-ready">READY</span>' if tavily_ready else '<span class="badge-warning">KEY REQUIRED</span>'
+                tavily_badge = '<span class="badge-ready">READY</span>' if tavily_ready else '<span class="badge-warning">MISSING IN SECRETS</span>'
             else:
-                tavily_badge = '<span class="badge-info">OPTIONAL</span>'
+                tavily_badge = '<span class="badge-ready">READY</span>' if tavily_ready else '<span class="badge-info">OPTIONAL</span>'
 
             st.markdown(f"""
             <div class="studio-card">
@@ -311,11 +310,17 @@ class LoadStreamlitUI:
                     {groq_badge}
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem;">
-                    <span>Tavily Search API:</span>
+                    <span>Tavily Search:</span>
                     {tavily_badge}
                 </div>
             </div>
             """, unsafe_allow_html=True)
+
+            # Show clear configuration warning if any required secret is missing
+            if not groq_ready:
+                st.warning("⚠️ GROQ_API_KEY is not configured in secrets/env variables.")
+            if selected_usecase == "Chatbot with Tool" and not tavily_ready:
+                st.warning("⚠️ TAVILY_API_KEY is not configured in secrets/env variables.")
 
             # Active Workflow Card
             nodes_desc = "START ➔ CHATBOT ➔ END" if selected_usecase == "Basic Chatbot" else "START ➔ CHATBOT ➔ TOOLS CONDITION ➔ TAVILY SEARCH ➔ CHATBOT ➔ END"
@@ -364,11 +369,11 @@ class LoadStreamlitUI:
                     ⚡ LangGraph State Flow
                 </h1>
                 <p style="font-size: 0.85rem; color: #8b949e; margin: 4px 0 0 0;">
-                    Enterprise State Machine Architecture powered by LangGraph & Groq
+                    Stateful Agentic AI Workflow powered by LangGraph, Groq & Tavily
                 </p>
             </div>
             <div>
-                <span class="badge-info" style="font-size:0.8rem; padding: 4px 10px;">AI STUDIO ACTIVE</span>
+                <span class="badge-info" style="font-size:0.8rem; padding: 4px 10px;">PUBLIC DEMO</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -410,4 +415,5 @@ class LoadStreamlitUI:
                 </div>
             </div>
             """, unsafe_allow_html=True)
+
 

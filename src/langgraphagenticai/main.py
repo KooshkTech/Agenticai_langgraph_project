@@ -39,11 +39,11 @@ def load_langgraph_agenticai_app():
         # Validate API keys before execution
         groq_api_key = user_input.get("GROQ_API_KEY")
         if not groq_api_key:
-            st.error("⚠️ Please enter your GROQ API key in the sidebar to proceed.")
+            st.error("⚠️ GROQ_API_KEY is missing from Streamlit secrets / environment variables.")
             return
 
         if usecase == "Chatbot with Tool" and not user_input.get("TAVILY_API_KEY"):
-            st.error("⚠️ Please enter your TAVILY API key in the sidebar to proceed with tool search.")
+            st.error("⚠️ TAVILY_API_KEY is missing from Streamlit secrets / environment variables.")
             return
 
         # Ensure environment variables are active
